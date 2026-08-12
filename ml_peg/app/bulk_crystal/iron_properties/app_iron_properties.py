@@ -24,7 +24,7 @@ FIGURES_PATH = DATA_PATH / "figures"
 DOCS_URL = "https://ddmms.github.io/ml-peg/user_guide/benchmarks/bulk_crystal.html#iron-properties"
 INFO_PATH = DATA_PATH / "info.json"
 BREAKDOWN_FILES = {
-    "Score": "breakdown_q.json",
+    "Score": "breakdown_score.json",
     "Bulk response": "breakdown_bulk_response.json",
     "Defect & phase energetics": "breakdown_defect_and_phase_energetics.json",
     "Slip": "breakdown_slip.json",

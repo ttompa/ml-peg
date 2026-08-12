@@ -408,12 +408,12 @@ Property groups
    34.929963 GPa, both at 0.6 Å.
 
 Within each group, component penalties are combined as a weighted root mean square.
-The dashboard quality score combines the four equally weighted group scores in the
-same way:
+The dashboard then uses ML-PEG's standard weighted mean to combine the four group
+scores:
 
 .. math::
 
-   Q = 1-\sqrt{\frac{\sum_g w_g(1-s_g)^2}{\sum_g w_g}}.
+   \mathrm{Score} = \frac{\sum_g w_g s_g}{\sum_g w_g}.
 
 All dashboard scores lie between zero and one, and higher is better. Selecting a group
 cell displays the individual component scores without adding them as table columns.

@@ -1007,7 +1007,7 @@ def save_figures_for_model(
     model_name
         Registered model name.
     details
-        Group and Q component metadata.
+        Group and overall-score component metadata.
     """
     figure_dir = OUT_PATH / "figures" / model_name
     figure_dir.mkdir(parents=True, exist_ok=True)
@@ -1018,14 +1018,10 @@ def save_figures_for_model(
                 figure_dir / f"{curve_type}.json"
             )
     for group, group_details in details.items():
-        filename = (
-            "q"
-            if group == "Score"
-            else group.lower().replace(" ", "_").replace("&", "and")
+        filename = group.lower().replace(" ", "_").replace("&", "and")
+        create_breakdown_figure(model_name, group, group_details).write_json(
+            figure_dir / f"breakdown_{filename}.json"
         )
-        create_breakdown_figure(
-            model_name, "Q" if group == "Score" else group, group_details
-        ).write_json(figure_dir / f"breakdown_{filename}.json")
 
 
 def collect_metrics() -> pd.DataFrame:
@@ -1068,8 +1064,6 @@ def iron_properties_collection() -> pd.DataFrame:
     metric_tooltips=DEFAULT_TOOLTIPS,
     thresholds=DEFAULT_THRESHOLDS,
     weights=DEFAULT_WEIGHTS,
-    aggregation="rms_penalty",
-    score_label="Q",
 )
 def metrics(iron_properties_collection: pd.DataFrame) -> dict[str, dict]:
     """
