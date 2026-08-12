@@ -591,6 +591,7 @@ def build_weight_components(
             model_configs=model_configs,
             scores_store_id="framework-summary-table-scores-store",
             summary_suffix="-framework-summary-table",
+            aggregation=getattr(table, "aggregation", "weighted_mean"),
         )
     else:
         register_category_table_callbacks(
@@ -599,6 +600,7 @@ def build_weight_components(
             model_levels=model_levels,
             metric_levels=metric_levels,
             model_configs=model_configs,
+            aggregation=getattr(table, "aggregation", "weighted_mean"),
         )
 
     # Callbacks to sync sliders, text boxes, and stored table weights

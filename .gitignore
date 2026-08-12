@@ -25,6 +25,8 @@
 *.xz
 *.txt
 *.csv
+!ml_peg/analysis/bulk_crystal/iron_properties/reference_data/*.csv
+!ml_peg/analysis/bulk_crystal/iron_properties/reference_data/reference_values.json
 *.npz
 ~*
 *~

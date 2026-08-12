@@ -219,6 +219,8 @@ def rebuild_table(
 
     table.thresholds = thresholds
     table.weights = weights
+    table.aggregation = table_json.get("aggregation", "weighted_mean")
+    table.score_label = table_json.get("score_label", "Score")
     table.description = description
     table.model_levels_of_theory = model_levels
     table.metric_levels_of_theory = metric_levels

@@ -284,6 +284,7 @@ def register_category_table_callbacks(
     model_configs: dict[str, Any] | None = None,
     scores_store_id: str = "summary-table-scores-store",
     summary_suffix: str = "-summary-table",
+    aggregation: str = "weighted_mean",
 ) -> None:
     """
     Register callback to update table scores when stored values change.
@@ -310,6 +311,9 @@ def register_category_table_callbacks(
         (the summary tables, not the benchmark tables this is also registered
         for). The suffix is stripped from the id to derive the score column key.
         Default is "-summary-table".
+    aggregation
+        Method used to combine normalized benchmark metrics. Default is
+        ``weighted_mean``.
     """
 
     @callback(
@@ -506,7 +510,10 @@ def register_category_table_callbacks(
 
             # Update overall table score for new weights and thresholds
             metrics_data = calc_table_scores(
-                stored_raw_data, stored_weights, thresholds
+                stored_raw_data,
+                stored_weights,
+                thresholds,
+                aggregation=aggregation,
             )
             # Update stored scores per metric
             scored_rows = calc_metric_scores(stored_raw_data, thresholds)
@@ -1402,7 +1409,12 @@ def register_filter_tables_callback(apps: dict[str, Dash]) -> None:
             updated_data = app.filter_table(elements)
 
             # Update overall table score for new weights and thresholds
-            metrics_data = calc_table_scores(updated_data, weights, thresholds)
+            metrics_data = calc_table_scores(
+                updated_data,
+                weights,
+                thresholds,
+                aggregation=getattr(app.table, "aggregation", "weighted_mean"),
+            )
 
             # Update stored scores per metric
             scored_rows = calc_metric_scores(updated_data, thresholds)

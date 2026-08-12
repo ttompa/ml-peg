@@ -1607,6 +1607,8 @@ def build_table(
     normalizer: Callable[[float, float, float], float] | None = None,
     weights: dict[str, float] | None = None,
     mlip_name_map: dict[str, str] | None = None,
+    aggregation: str = "weighted_mean",
+    score_label: str = "Score",
 ) -> Callable:
     """
     Build DataTable, including optional metric normalisation.
@@ -1636,6 +1638,12 @@ def build_table(
         Optional mapping of model identifier -> display name. Use this to annotate
         table rows (e.g. append a suffix) without changing the underlying model
         configuration metadata.
+    aggregation
+        Method used to combine normalized metric scores. Default is
+        ``weighted_mean``.
+    score_label
+        Display label for the aggregate score column. The internal column ID remains
+        ``Score``. Default is ``Score``.
 
     Returns
     -------
@@ -1735,7 +1743,7 @@ def build_table(
                 "MLIP": "Model identifier, hover for configuration details.",
             }
             summary_tooltips["Score"] = (
-                "Weighted score across metrics, Higher is better (normalised 0 to 1)."
+                f"{score_label} across metrics. Higher is better (normalised 0 to 1)."
             )
 
             if metric_tooltips:
@@ -1753,11 +1761,16 @@ def build_table(
                 thresholds=thresholds,
                 normalizer=normalizer,
                 weights=metric_weights,
+                aggregation=aggregation,
             )
 
             table = dash_table.DataTable(
                 metrics_data,
-                [{"name": i, "id": i} for i in metrics_columns if i != "id"],
+                [
+                    {"name": score_label if column == "Score" else column, "id": column}
+                    for column in metrics_columns
+                    if column != "id"
+                ],
                 id="metrics",
                 tooltip_header=tooltip_header,
             )
@@ -1793,6 +1806,8 @@ def build_table(
                         "tooltip_header": tooltip_header,
                         "thresholds": thresholds,
                         "weights": metric_weights,
+                        "aggregation": aggregation,
+                        "score_label": score_label,
                         "model_levels_of_theory": model_levels,
                         "metric_levels_of_theory": metric_levels,
                         "model_configs": model_configs,

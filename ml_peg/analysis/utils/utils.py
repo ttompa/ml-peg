@@ -433,6 +433,7 @@ def calc_table_scores(
     thresholds: Thresholds | None = None,
     normalizer: Callable[[float, float, float], float] | None = None,
     return_scores: bool = False,
+    aggregation: str = "weighted_mean",
 ) -> list[MetricRow] | tuple[list[MetricRow], list[MetricRow]]:
     """
     Calculate (normalised) score for each model and add to table data.
@@ -454,6 +455,10 @@ def calc_table_scores(
     return_scores
         If True, also return the normalised metric rows used to calculate scores.
         Default is False.
+    aggregation
+        Method used to combine normalized metric scores. ``weighted_mean`` preserves
+        the standard arithmetic mean; ``rms_penalty`` computes one minus the weighted
+        RMS distance from a perfect score. Default is ``weighted_mean``.
 
     Returns
     -------
@@ -461,6 +466,9 @@ def calc_table_scores(
         Rows of data with combined score for each model added. If `return_scores` is
         `True`, the normalised metric rows are also returned.
     """
+    if aggregation not in {"weighted_mean", "rms_penalty"}:
+        raise ValueError(f"Unknown table score aggregation: {aggregation}")
+
     weights = weights if weights else {}
 
     metrics_scores = calc_metric_scores(metrics_data, thresholds, normalizer)
@@ -491,13 +499,19 @@ def calc_table_scores(
                 contains_nan = True
                 break
 
-            weighted_sum += score * weight
+            contribution = score if aggregation == "weighted_mean" else (1 - score) ** 2
+            weighted_sum += contribution * weight
             weight_sum += weight
 
         if contains_nan:
             metrics_row["Score"] = "NaN"
         elif weight_sum > 0:
-            metrics_row["Score"] = weighted_sum / weight_sum
+            aggregate = weighted_sum / weight_sum
+            metrics_row["Score"] = (
+                aggregate
+                if aggregation == "weighted_mean"
+                else 1 - float(np.sqrt(aggregate))
+            )
         else:
             metrics_row["Score"] = None
 
