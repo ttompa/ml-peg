@@ -1,4 +1,15 @@
-"""Analyse the Iron Properties benchmark."""
+"""
+Analyse BCC iron properties benchmark.
+
+This analysis combines EOS, elastic, Bain path, defect, surface, and stacking fault
+properties.
+
+References
+----------
+Zhang, L., Csányi, G., van der Giessen, E., & Maresca, F. (2023).
+Efficiency, Accuracy, and Transferability of Machine Learning Potentials:
+Application to Dislocations and Cracks in Iron.
+"""
 
 from __future__ import annotations
 

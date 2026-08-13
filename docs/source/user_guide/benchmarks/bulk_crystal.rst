@@ -330,102 +330,44 @@ Summary
 -------
 
 This benchmark evaluates BCC iron properties relevant to plasticity and fracture. It
-is based on the validation workflow of `Zhang et al. (2024)
-<https://doi.org/10.1016/j.actamat.2024.119788>`_, with several deliberate changes.
-ML-PEG includes the bulk modulus, full Bain, generalised stacking-fault energy (GSFE),
-and traction-separation curves, and rebalances the properties into four physical
-groups. Its quality score is therefore not numerically comparable with the quality
-factor in the original paper.
+adapts the validation workflow of `Zhang et al. (2024)
+<https://doi.org/10.1016/j.actamat.2024.119788>`_ by updating the reference data,
+scoring complete Bain, generalised stacking-fault energy (GSFE), and
+traction-separation curves, and grouping the results. Its score is therefore not
+directly comparable with the quality factor in the original paper.
 
-Metrics
--------
+Method and scoring
+------------------
 
-Primitive scores
-^^^^^^^^^^^^^^^^
+The reported groups are:
 
-Each scalar relative error :math:`e_i` is converted to a clipped penalty
+* **Bulk response:** lattice parameter, bulk modulus, and three elastic constants.
+* **Defect and phase energetics:** vacancy formation energy and the Bain path. The
+  latter combines its curve error (70%) with the FCC-BCC energy at
+  :math:`c/a=\sqrt{2}` (30%).
+* **Slip:** equally weighted :math:`\{110\}\langle111\rangle` and
+  :math:`\{112\}\langle111\rangle` GSFE curves.
+* **Cleavage:** surface energies (50%) and the (100) and (110)
+  traction-separation curves (25% each).
 
-.. math::
+Scalar scores decrease linearly with relative error and reach zero at 2% for
+:math:`a_0`, 50% for :math:`B_0`, 75% for the elastic constants, and 20% for
+vacancy and surface energies. Curve scores combine relative integrated absolute
+error (50%), peak-height error (30%), and peak-location error (20%). The general
+curve-error cutoff is 30%; the Bain endpoint cutoff is 50%, and the GSFE and
+traction peak-location cutoffs are 0.10 Burgers vectors and 0.30 Å, respectively.
 
-   p_i = \mathrm{clip}(e_i/e_i^{\mathrm{bad}}, 0, 1), \qquad s_i = 1-p_i.
+Component penalties are combined by weighted root mean square within each group.
+The dashboard uses ML-PEG's standard weighted mean for the overall score. Selecting
+a group cell displays its component scores, while the curve selector shows the model
+and DFT reference curves.
 
-The bad-error thresholds are 2% for :math:`a_0` and 20% for :math:`B_0`, the
-elastic constants, vacancy formation energy, and each surface energy. A missing or
-nonfinite result receives a score of zero.
-
-Curve scores combine the relative integrated absolute error, the relative peak-height
-error, and the peak-location error:
-
-.. math::
-
-   e_{\mathrm{IAE}} =
-   \frac{\int |y_{\mathrm{MLIP}}-y_{\mathrm{DFT}}|\,\mathrm{d}x}
-        {\int |y_{\mathrm{DFT}}|\,\mathrm{d}x},
-
-.. math::
-
-   s_{\mathrm{curve}} = 1-\sqrt{0.50p_{\mathrm{IAE}}^2
-   +0.30p_{\mathrm{peak}}^2+0.20p_{\mathrm{location}}^2}.
-
-The IAE and peak-height bad thresholds are 30%. Peak-location bad thresholds are
-0.20 Burgers vectors for GSFE and 0.30 Å for traction separation. Incomplete curves
-are additionally penalised by their missing domain coverage.
-
-Property groups
-^^^^^^^^^^^^^^^
-
-1. **Bulk response:** :math:`a_0` (25%), :math:`B_0` (25%), and
-   :math:`C_{11}`, :math:`C_{12}`, and :math:`C_{44}` (one sixth each). The EOS
-   properties come from a third-order Birch-Murnaghan fit to 30 BCC energy-volume
-   points. Elastic constants use central stress differences for strains of
-   :math:`\pm10^{-5}` in a 4x4x4 conventional supercell. The PBE references are
-   2.834 Å, 199.8 GPa, 296.7 GPa, 151.4 GPa, and 104.7 GPa, respectively.
-
-2. **Defect and phase energetics:** vacancy formation (50%) and Bain path (50%). The
-   vacancy calculation uses a fixed 3x3x3 conventional cell (54 perfect and 53
-   defective atoms), matching the supercell behind the 2.22 eV DFT reference. The
-   Bain score combines curve IAE (70%) with the FCC-BCC energy error at an explicitly
-   calculated :math:`c/a=\sqrt{2}` endpoint (30%); the endpoint reference is
-   162.1369 meV/atom.
-
-3. **Slip:** equally weighted :math:`\{110\}\langle111\rangle` and
-   :math:`\{112\}\langle111\rangle` GSFE curves. Each curve is sampled in 0.04 Å
-   increments with an exact endpoint at one Burgers vector,
-   :math:`b=a_0\sqrt{3}/2`. Relaxation is restricted to the fault-plane normal. The
-   reference unstable energies are 0.9754902 and 1.1198044 J/m².
-
-4. **Cleavage:** surface energies (50%) and the (100) and (110)
-   traction-separation curves (25% each). Traction is the finite-difference energy
-   derivative evaluated at interval midpoints,
-
-   .. math::
-
-      T_{i-1/2}=\frac{E_i-E_{i-1}}{A(d_i-d_{i-1})}.
-
-   Only positive traction contributes to the reported maximum. Surface references
-   are 2.543, 2.495, 2.752, and 2.629 J/m² for (100), (110), (111), and (112),
-   respectively. The (100) and (110) maximum-traction references are 35.045069 and
-   34.929963 GPa, both at 0.6 Å.
-
-Within each group, component penalties are combined as a weighted root mean square.
-The dashboard then uses ML-PEG's standard weighted mean to combine the four group
-scores:
-
-.. math::
-
-   \mathrm{Score} = \frac{\sum_g w_g s_g}{\sum_g w_g}.
-
-All dashboard scores lie between zero and one, and higher is better. Selecting a group
-cell displays the individual component scores without adding them as table columns.
-
-Failure and convergence handling
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Every benchmark section runs independently. If the EOS fit does not provide a finite
-lattice parameter, later sections use the 2.834 Å DFT value and record the fallback.
-Optimizer exceptions and nonfinite values receive deterministic zero component scores;
-finite results that reach the 100-step BFGS limit remain scoreable but are flagged as
-nonconverged. Outputs use strict JSON and never contain ``NaN`` tokens.
+Calculation failures produce deterministic scores rather than aborting the benchmark.
+Finite nonconverged optimizations remain scoreable and are flagged, while missing or
+nonfinite results score zero. Existing result files remain analysable; rerunning the
+analysis and app is sufficient to generate the grouped dashboard. A calculation rerun
+only adds minor refinements such as denser GSFE sampling, the exact FCC Bain point,
+corrected geometry conventions, and convergence metadata.
 
 
 Computational cost

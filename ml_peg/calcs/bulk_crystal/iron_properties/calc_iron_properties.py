@@ -43,7 +43,6 @@ if TYPE_CHECKING:
 MODELS = load_models(current_models)
 OUT_PATH = Path(__file__).parent / "outputs"
 
-BENCHMARK_VERSION = 2
 REFERENCE_LATTICE_PARAMETER = 2.834
 EOS_NUM_POINTS = 30
 BFGS_FMAX = 1e-5
@@ -743,7 +742,7 @@ def _write_structures(write_dir: Path, lattice_parameter: float) -> None:
 
 def run_iron_properties(model_name: str, model: Any) -> None:
     """
-    Run the complete Iron Properties v2 benchmark for one model.
+    Run the complete Iron Properties benchmark for one model.
 
     Parameters
     ----------
@@ -755,7 +754,7 @@ def run_iron_properties(model_name: str, model: Any) -> None:
     calc = model.get_calculator(precision="high")
     write_dir = OUT_PATH / model_name
     write_dir.mkdir(parents=True, exist_ok=True)
-    results: dict[str, Any] = {"benchmark_version": BENCHMARK_VERSION}
+    results: dict[str, Any] = {}
 
     print(f"[{model_name}] Running EOS calculation...")
     eos = _run_section("EOS", lambda: run_eos_calculation(calc))
@@ -867,7 +866,6 @@ def run_iron_properties(model_name: str, model: Any) -> None:
         json.dumps(safe_results, indent=2, allow_nan=False)
     )
     summary = {
-        "benchmark_version": BENCHMARK_VERSION,
         "a0": eos.get("a0"),
         "B0": eos.get("B0"),
         "C11": elastic.get("C11"),

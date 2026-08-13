@@ -1,5 +1,4 @@
 {
-  "benchmark_version": 2,
   "sources": {
     "zhang": "Zhang et al., Acta Materialia 270 (2024) 119788",
     "dragoni": "Dragoni et al., Physical Review Materials 2 (2018) 013808"
@@ -11,12 +10,7 @@
     "C12": {"value": 151.4, "unit": "GPa", "source": "dragoni"},
     "C44": {"value": 104.7, "unit": "GPa", "source": "dragoni"},
     "E_bcc_fcc": {"value": 162.136884, "unit": "meV/atom", "source": "zhang"},
-    "E_vac": {
-      "value": 2.22,
-      "unit": "eV",
-      "source": "dragoni",
-      "protocol": "3x3x3 conventional BCC cell; 54 perfect and 53 defective atoms"
-    },
+    "E_vac": {"value": 2.22, "unit": "eV", "source": "dragoni"},
     "gamma_100": {"value": 2.543, "unit": "J/m2", "source": "dragoni"},
     "gamma_110": {"value": 2.495, "unit": "J/m2", "source": "dragoni"},
     "gamma_111": {"value": 2.752, "unit": "J/m2", "source": "dragoni"},
