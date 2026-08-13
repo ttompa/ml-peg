@@ -1,11 +1,10 @@
-"""Analyse the Iron Properties v2 benchmark."""
+"""Analyse the Iron Properties benchmark."""
 
 from __future__ import annotations
 
 import json
 from pathlib import Path
 from typing import Any
-from warnings import warn
 
 import numpy as np
 import pandas as pd
@@ -21,7 +20,6 @@ from ml_peg.models import current_models
 from ml_peg.models.get_models import get_model_names
 
 MODELS = get_model_names(current_models)
-BENCHMARK_VERSION = 2
 CALC_PATH = CALCS_ROOT / "bulk_crystal" / "iron_properties" / "outputs"
 OUT_PATH = APP_ROOT / "data" / "bulk_crystal" / "iron_properties"
 REFERENCE_PATH = Path(__file__).with_name("reference_data")
@@ -44,15 +42,16 @@ GROUPS = (
 )
 SCALAR_BAD_ERROR = {
     "a0": 0.02,
-    "B0": 0.20,
-    "C11": 0.20,
-    "C12": 0.20,
-    "C44": 0.20,
+    "B0": 0.50,
+    "C11": 0.75,
+    "C12": 0.75,
+    "C44": 0.75,
     "E_vac": 0.20,
 }
 SURFACE_BAD_ERROR = 0.20
 CURVE_BAD_ERROR = 0.30
-GSFE_LOCATION_BAD = 0.20
+BAIN_ENDPOINT_BAD_ERROR = 0.50
+GSFE_LOCATION_BAD = 0.10
 TS_LOCATION_BAD = 0.30
 
 CURVE_FILES = {
@@ -226,7 +225,7 @@ def _status_summary(status: Any) -> tuple[str, bool]:
 
 def load_model_results(model_name: str) -> dict[str, Any] | None:
     """
-    Load one model's v2 result file, rejecting earlier schemas.
+    Load one model's result file.
 
     Parameters
     ----------
@@ -236,19 +235,12 @@ def load_model_results(model_name: str) -> dict[str, Any] | None:
     Returns
     -------
     dict[str, Any] or None
-        Version-two results when available.
+        Results when available.
     """
     result_path = CALC_PATH / model_name / "results.json"
     if not result_path.exists():
         return None
-    results = json.loads(result_path.read_text())
-    if results.get("benchmark_version") != BENCHMARK_VERSION:
-        warn(
-            f"Ignoring Iron Properties v1 results for {model_name}; rerun required",
-            stacklevel=2,
-        )
-        return None
-    return results
+    return json.loads(result_path.read_text())
 
 
 def load_curve(model_name: str, curve_type: str) -> pd.DataFrame:
@@ -271,7 +263,24 @@ def load_curve(model_name: str, curve_type: str) -> pd.DataFrame:
     if filename is None:
         return pd.DataFrame()
     path = CALC_PATH / model_name / filename
-    return pd.read_csv(path) if path.exists() else pd.DataFrame()
+    if not path.exists():
+        return pd.DataFrame()
+
+    curve = pd.read_csv(path)
+    if curve_type == "eos" and "energy_meV" not in curve and "energy" in curve:
+        energy = pd.to_numeric(curve["energy"], errors="coerce")
+        if energy.notna().any():
+            curve["energy_meV"] = (energy - energy.min()) * 1000
+    if (
+        curve_type.startswith("sfe_")
+        and "displacement_fraction" not in curve
+        and "displacement" in curve
+    ):
+        displacement = pd.to_numeric(curve["displacement"], errors="coerce")
+        endpoint = displacement.max()
+        if _finite(endpoint) and endpoint > 0:
+            curve["displacement_fraction"] = displacement / endpoint
+    return curve
 
 
 def load_reference_curve(curve_type: str) -> pd.DataFrame:
@@ -676,7 +685,7 @@ def _bain_detail(model_name: str, results: dict[str, Any]) -> dict[str, Any]:
         if _finite(endpoint)
         else float("nan")
     )
-    endpoint_penalty = _penalty(endpoint_error, CURVE_BAD_ERROR)
+    endpoint_penalty = _penalty(endpoint_error, BAIN_ENDPOINT_BAD_ERROR)
     score = 1 - float(np.sqrt(0.70 * curve_penalty**2 + 0.30 * endpoint_penalty**2))
     status_text, _ = _status_summary(results.get("status"))
     return {
@@ -704,7 +713,7 @@ def compute_group_scores(
     model_name
         Registered model name.
     results
-        Version-two calculation results.
+        Calculation results.
 
     Returns
     -------
@@ -900,20 +909,35 @@ def create_breakdown_figure(
         ]
         for detail in details
     ]
+    scores = [detail["score"] for detail in details]
+    hovertemplate = (
+        "Score: %{x:.3f}<br>Predicted: %{customdata[0]} %{customdata[4]}"
+        "<br>Reference: %{customdata[1]} %{customdata[4]}"
+        "<br>Error: %{customdata[2]}<br>Bad threshold: %{customdata[3]}"
+        "<br>Status: %{customdata[5]}<extra></extra>"
+    )
     figure = go.Figure(
         go.Bar(
-            x=[detail["score"] for detail in details],
+            x=scores,
             y=names,
             orientation="h",
             customdata=custom_data,
-            hovertemplate=(
-                "Score: %{x:.3f}<br>Predicted: %{customdata[0]} %{customdata[4]}"
-                "<br>Reference: %{customdata[1]} %{customdata[4]}"
-                "<br>Error: %{customdata[2]}<br>Bad threshold: %{customdata[3]}"
-                "<br>Status: %{customdata[5]}<extra></extra>"
-            ),
+            hovertemplate=hovertemplate,
         )
     )
+    zero_indices = [index for index, score in enumerate(scores) if score == 0]
+    if zero_indices:
+        figure.add_trace(
+            go.Scatter(
+                x=[0] * len(zero_indices),
+                y=[names[index] for index in zero_indices],
+                mode="markers",
+                marker={"size": 10},
+                customdata=[custom_data[index] for index in zero_indices],
+                hovertemplate=hovertemplate,
+                showlegend=False,
+            )
+        )
     figure.update_layout(
         title=f"{group} breakdown — {model_name}",
         xaxis={"title": "Component score", "range": [0, 1]},
@@ -1026,7 +1050,7 @@ def save_figures_for_model(
 
 def collect_metrics() -> pd.DataFrame:
     """
-    Collect the four Iron v2 group scores across available models.
+    Collect the four Iron group scores across available models.
 
     Returns
     -------
@@ -1048,7 +1072,7 @@ def collect_metrics() -> pd.DataFrame:
 @pytest.fixture
 def iron_properties_collection() -> pd.DataFrame:
     """
-    Provide collected Iron v2 group scores.
+    Provide collected Iron group scores.
 
     Returns
     -------
@@ -1067,7 +1091,7 @@ def iron_properties_collection() -> pd.DataFrame:
 )
 def metrics(iron_properties_collection: pd.DataFrame) -> dict[str, dict]:
     """
-    Build the Iron v2 dashboard table.
+    Build the Iron dashboard table.
 
     Parameters
     ----------
@@ -1093,7 +1117,7 @@ def metrics(iron_properties_collection: pd.DataFrame) -> dict[str, dict]:
 
 def test_iron_properties(metrics: dict[str, dict]) -> None:
     """
-    Generate Iron v2 analysis artifacts.
+    Generate Iron analysis artifacts.
 
     Parameters
     ----------
