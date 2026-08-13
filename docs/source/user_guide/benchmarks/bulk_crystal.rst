@@ -331,36 +331,52 @@ Summary
 
 This benchmark evaluates BCC iron properties relevant to plasticity and fracture. It
 adapts the validation workflow of `Zhang et al. (2024)
-<https://doi.org/10.1016/j.actamat.2024.119788>`_ by updating the reference data,
-scoring complete Bain, generalised stacking-fault energy (GSFE), and
-traction-separation curves, and grouping the results. Its score is therefore not
-directly comparable with the quality factor in the original paper.
+<https://doi.org/10.1016/j.actamat.2024.119788>`_ by scoring complete Bain,
+generalised stacking-fault energy (GSFE), and traction-separation curves, and by
+grouping related properties. Its score is therefore not directly comparable with the
+quality factor in the original paper.
 
 Method and scoring
 ------------------
 
-The reported groups are:
+The calculations and reported groups are:
 
-* **Bulk response:** lattice parameter, bulk modulus, and three elastic constants.
-* **Defect and phase energetics:** vacancy formation energy and the Bain path. The
-  latter combines its curve error (70%) with the FCC-BCC energy at
-  :math:`c/a=\sqrt{2}` (30%).
+* **Bulk response:** lattice parameter (25%), bulk modulus (25%), and
+  :math:`C_{11}`, :math:`C_{12}`, and :math:`C_{44}` (one sixth each). The first two
+  are obtained from a third-order Birch-Murnaghan fit to 30 energy-volume points.
+  Elastic constants use central stress differences at strains of
+  :math:`\pm10^{-5}` in a 4x4x4 BCC supercell.
+* **Defect and phase energetics:** vacancy formation energy (50%) and the Bain path
+  (50%). Vacancy positions are relaxed at fixed cell volume. The Bain path spans
+  :math:`0.72 \leq c/a \leq 2.0`, with volume relaxation at fixed :math:`c/a` and an
+  exact FCC point at :math:`c/a=\sqrt{2}`. Its score combines curve error (70%) and
+  FCC-BCC endpoint error (30%).
 * **Slip:** equally weighted :math:`\{110\}\langle111\rangle` and
-  :math:`\{112\}\langle111\rangle` GSFE curves.
-* **Cleavage:** surface energies (50%) and the (100) and (110)
-  traction-separation curves (25% each).
+  :math:`\{112\}\langle111\rangle` GSFE curves. Each oriented cell is displaced in
+  0.04 Å increments over one Burgers vector, with relaxation restricted to the fault
+  normal and an exact endpoint.
+* **Cleavage:** the four (100), (110), (111), and (112) surface energies (50%) and
+  unrelaxed (100) and (110) traction-separation curves (25% each). Separation is
+  sampled every 0.05 Å to 5 Å; traction is the finite-difference derivative of the
+  energy and its reported maximum is restricted to positive values.
 
-Scalar scores decrease linearly with relative error and reach zero at 2% for
-:math:`a_0`, 50% for :math:`B_0`, 75% for the elastic constants, and 20% for
-vacancy and surface energies. Curve scores combine relative integrated absolute
-error (50%), peak-height error (30%), and peak-location error (20%). The general
-curve-error cutoff is 30%; the Bain endpoint cutoff is 50%, and the GSFE and
-traction peak-location cutoffs are 0.10 Burgers vectors and 0.30 Å, respectively.
+A scalar relative error :math:`e` is mapped to
+:math:`s=1-\mathrm{clip}(e/e_{\mathrm{bad}},0,1)`. The zero-score cutoffs are 2% for
+:math:`a_0`, 50% for :math:`B_0`, 75% for the elastic constants, and 20% for vacancy
+and surface energies.
+
+GSFE and traction curves compare their model and DFT interpolants over the common
+domain. Their score combines relative integrated absolute error (50%), relative
+peak-height error (30%), and peak-location error (20%) through a root-mean-square
+penalty. Integrated and peak-height errors reach their maximum penalty at 30%; the
+location cutoffs are 0.10 Burgers vectors for GSFE and 0.30 Å for traction. Missing
+curve coverage is penalised. The Bain curve uses the same integrated-error cutoff,
+with a separate 50% cutoff for its FCC endpoint.
 
 Component penalties are combined by weighted root mean square within each group.
-The dashboard uses ML-PEG's standard weighted mean for the overall score. Selecting
-a group cell displays its component scores, while the curve selector shows the model
-and DFT reference curves.
+The dashboard then uses ML-PEG's standard weighted mean of the four group scores for
+the overall score. Selecting a group cell displays its component scores, while the
+curve selector shows the model and DFT reference curves.
 
 Calculation failures produce deterministic scores rather than aborting the benchmark.
 Finite nonconverged optimizations remain scoreable and are flagged, while missing or
