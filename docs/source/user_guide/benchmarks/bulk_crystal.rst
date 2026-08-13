@@ -378,14 +378,6 @@ The dashboard then uses ML-PEG's standard weighted mean of the four group scores
 the overall score. Selecting a group cell displays its component scores, while the
 curve selector shows the model and DFT reference curves.
 
-Calculation failures produce deterministic scores rather than aborting the benchmark.
-Finite nonconverged optimizations remain scoreable and are flagged, while missing or
-nonfinite results score zero. Existing result files remain analysable; rerunning the
-analysis and app is sufficient to generate the grouped dashboard. A calculation rerun
-only adds minor refinements such as denser GSFE sampling, the exact FCC Bain point,
-corrected geometry conventions, and convergence metadata.
-
-
 Computational cost
 ------------------
 
